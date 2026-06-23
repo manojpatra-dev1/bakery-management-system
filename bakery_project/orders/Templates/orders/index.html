@@ -1,0 +1,151 @@
+{% extends 'orders/base.html' %}
+
+{% block title %}Dashboard - Bakery Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>📋 Order Management Dashboard</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="/add-order/" class="btn btn-primary btn-lg">+ New Order</a>
+    </div>
+</div>
+
+<!-- Filter by Status -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <button class="btn btn-outline-warning w-100" onclick="filterOrders('all')">All Orders</button>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-outline-warning w-100" onclick="filterOrders('pending')">⏳ Pending</button>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-outline-info w-100" onclick="filterOrders('ready')">✅ Ready</button>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-outline-success w-100" onclick="filterOrders('completed')">✔️ Completed</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Orders Table -->
+<div class="card">
+    <div class="card-header bg-light">
+        <h5>Today's Orders</h5>
+    </div>
+    <div class="card-body">
+        <table class="table table-hover" id="ordersTable">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Customer</th>
+                    <th>Phone</th>
+                    <th>Status</th>
+                    <th>Total</th>
+                    <th>Time</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="ordersBody">
+                <!-- Orders will load here -->
+            </tbody>
+        </table>
+        <div id="noOrders" class="alert alert-info" style="display:none;">
+            No orders found.
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let allOrders = [];
+    let currentFilter = 'all';
+
+    // Load orders when page loads
+    $(document).ready(function() {
+        loadOrders();
+        setInterval(loadOrders, 5000); // Refresh every 5 seconds
+    });
+
+    function loadOrders() {
+        $.ajax({
+            url: '/api/orders/',
+            type: 'GET',
+            success: function(data) {
+                allOrders = data;
+                displayOrders();
+            }
+        });
+    }
+
+    function displayOrders() {
+        let tbody = $('#ordersBody');
+        tbody.html('');
+
+        let filtered = allOrders;
+        if (currentFilter !== 'all') {
+            filtered = allOrders.filter(order => order.status === currentFilter);
+        }
+
+        if (filtered.length === 0) {
+            $('#noOrders').show();
+            return;
+        }
+        $('#noOrders').hide();
+
+        filtered.forEach(order => {
+            let statusBadge = `<span class="status-${order.status}">${order.status.toUpperCase()}</span>`;
+            let time = new Date(order.created_at).toLocaleTimeString();
+
+            tbody.append(`
+                <tr>
+                    <td><strong>#${order.id}</strong></td>
+                    <td>${order.customer_name}</td>
+                    <td>${order.customer_phone}</td>
+                    <td>${statusBadge}</td>
+                    <td>₹${order.total_price}</td>
+                    <td>${time}</td>
+                    <td>
+                        <button class="btn btn-sm btn-info" onclick="viewOrder(${order.id})">View</button>
+                        <button class="btn btn-sm btn-warning" onclick="updateStatus(${order.id})">Update</button>
+                    </td>
+                </tr>
+            `);
+        });
+    }
+
+    function filterOrders(status) {
+        currentFilter = status;
+        displayOrders();
+    }
+
+    function viewOrder(orderId) {
+        window.location.href = `/order/${orderId}/`;
+    }
+
+    function updateStatus(orderId) {
+        let newStatus = prompt('Enter new status (pending, ready, completed, cancelled):');
+        if (newStatus) {
+            $.ajax({
+                url: `/api/orders/${orderId}/update_status/`,
+                type: 'POST',
+                data: JSON.stringify({status: newStatus}),
+                contentType: 'application/json',
+                success: function() {
+                    alert('Status updated!');
+                    loadOrders();
+                },
+                error: function() {
+                    alert('Error updating status');
+                }
+            });
+        }
+    }
+</script>
+{% endblock %}

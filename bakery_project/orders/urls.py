@@ -1,0 +1,14 @@
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import ProductViewSet, OrderViewSet, index, add_order, order_detail
+
+router = DefaultRouter()
+router.register(r'products', ProductViewSet)
+router.register(r'orders', OrderViewSet)
+
+urlpatterns = [
+    path('', index, name='index'),
+    path('add-order/', add_order, name='add_order'),
+    path('order/<int:pk>/', order_detail, name='order_detail'),
+    path('api/', include(router.urls)),
+]

@@ -1,0 +1,140 @@
+{% extends 'orders/base.html' %}
+
+{% block title %}Order Details{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>📋 Order Details</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="/" class="btn btn-secondary">← Back</a>
+    </div>
+</div>
+
+<div class="card mb-4" id="orderCard">
+    <!-- Order details will load here -->
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        let orderId = {{ order_id }};
+        loadOrderDetail(orderId);
+    });
+
+    function loadOrderDetail(orderId) {
+        $.ajax({
+            url: `/api/orders/${orderId}/`,
+            type: 'GET',
+            success: function(order) {
+                displayOrderDetail(order);
+            },
+            error: function() {
+                $('#orderCard').html('<div class="alert alert-danger">Order not found!</div>');
+            }
+        });
+    }
+
+    function displayOrderDetail(order) {
+        let statusBadge = `<span class="status-${order.status}">${order.status.toUpperCase()}</span>`;
+        let createdDate = new Date(order.created_at).toLocaleString();
+
+        let itemsHtml = '';
+        if (order.items && order.items.length > 0) {
+            order.items.forEach(item => {
+                itemsHtml += `
+                    <tr>
+                        <td>${item.product.name}</td>
+                        <td>${item.quantity}</td>
+                        <td>₹${item.price_at_time}</td>
+                        <td>₹${(item.quantity * item.price_at_time).toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+        } else {
+            itemsHtml = '<tr><td colspan="4" class="text-center">No items in this order</td></tr>';
+        }
+
+        let html = `
+            <div class="card-header bg-light">
+                <h4>Order #${order.id}</h4>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h5>Customer Information</h5>
+                        <p><strong>Name:</strong> ${order.customer_name}</p>
+                        <p><strong>Phone:</strong> ${order.customer_phone}</p>
+                        <p><strong>Email:</strong> ${order.customer_email || 'Not provided'}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Order Information</h5>
+                        <p><strong>Status:</strong> ${statusBadge}</p>
+                        <p><strong>Created:</strong> ${createdDate}</p>
+                        <p><strong>Total Price:</strong> <strong>₹${order.total_price}</strong></p>
+                    </div>
+                </div>
+
+                ${order.notes ? `<p><strong>Notes:</strong> ${order.notes}</p>` : ''}
+
+                <hr>
+
+                <h5 class="mb-3">📦 Order Items</h5>
+                <table class="table table-striped">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Price</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsHtml}
+                    </tbody>
+                </table>
+
+                <hr>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Change Status</h5>
+                        <div class="input-group">
+                            <select class="form-control" id="statusSelect">
+                                <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Pending</option>
+                                <option value="ready" ${order.status === 'ready' ? 'selected' : ''}>Ready for Pickup</option>
+                                <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>Completed</option>
+                                <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                            </select>
+                            <button class="btn btn-primary" onclick="updateOrderStatus(${order.id})">Update</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        $('#orderCard').html(html);
+    }
+
+    function updateOrderStatus(orderId) {
+        let newStatus = $('#statusSelect').val();
+
+        $.ajax({
+            url: `/api/orders/${orderId}/update_status/`,
+            type: 'POST',
+            data: JSON.stringify({status: newStatus}),
+            contentType: 'application/json',
+            success: function() {
+                alert('Status updated successfully!');
+                loadOrderDetail(orderId);
+            },
+            error: function() {
+                alert('Error updating status');
+            }
+        });
+    }
+</script>
+{% endblock %}

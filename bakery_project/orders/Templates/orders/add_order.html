@@ -1,0 +1,212 @@
+{% extends 'orders/base.html' %}
+
+{% block title %}Add New Order{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>➕ Create New Order</h1>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form id="orderForm">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Customer Name *</label>
+                    <input type="text" class="form-control" id="customerName" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Phone Number *</label>
+                    <input type="tel" class="form-control" id="customerPhone" required>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Email (Optional)</label>
+                    <input type="email" class="form-control" id="customerEmail">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Notes</label>
+                    <input type="text" class="form-control" id="notes" placeholder="e.g. Extra cream, no sugar">
+                </div>
+            </div>
+
+            <hr>
+
+            <h4 class="mb-3">📦 Items</h4>
+
+            <div id="itemsContainer">
+                <div class="item-row row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Product</label>
+                        <select class="form-control product-select" required onchange="updateItemPrice(this)">
+                            <option value="">Select Product</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Quantity</label>
+                        <input type="number" class="form-control quantity" value="1" min="1" required onchange="updateTotal()">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Price</label>
+                        <input type="text" class="form-control item-price" readonly>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="button" class="btn btn-danger w-100" onclick="removeItem(this)">Remove</button>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" class="btn btn-secondary mb-3" onclick="addItemRow()">+ Add Item</button>
+
+            <hr>
+
+            <div class="row">
+                <div class="col-md-6"></div>
+                <div class="col-md-6">
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <h5>Total Price:</h5>
+                        </div>
+                        <div class="col-md-4">
+                            <h5 id="totalPrice">₹0.00</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg w-100">✅ Create Order</button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let products = [];
+
+    $(document).ready(function() {
+        loadProducts();
+    });
+
+    function loadProducts() {
+        $.ajax({
+            url: '/api/products/',
+            type: 'GET',
+            success: function(data) {
+                products = data;
+                updateProductSelects();
+            }
+        });
+    }
+
+    function updateProductSelects() {
+        $('.product-select').html('<option value="">Select Product</option>');
+        products.forEach(product => {
+            $('.product-select').append(`
+                <option value="${product.id}" data-price="${product.price}">
+                    ${product.name} (₹${product.price})
+                </option>
+            `);
+        });
+    }
+
+    function addItemRow() {
+        const newRow = `
+            <div class="item-row row mb-3">
+                <div class="col-md-4">
+                    <label class="form-label">Product</label>
+                    <select class="form-control product-select" required onchange="updateItemPrice(this)">
+                        <option value="">Select Product</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Quantity</label>
+                    <input type="number" class="form-control quantity" value="1" min="1" required onchange="updateTotal()">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Price</label>
+                    <input type="text" class="form-control item-price" readonly>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="button" class="btn btn-danger w-100" onclick="removeItem(this)">Remove</button>
+                </div>
+            </div>
+        `;
+        $('#itemsContainer').append(newRow);
+        updateProductSelects();
+    }
+
+    function removeItem(btn) {
+        $(btn).closest('.item-row').remove();
+        updateTotal();
+    }
+
+    function updateItemPrice(select) {
+        const price = $(select).find('option:selected').data('price');
+        $(select).closest('.item-row').find('.item-price').val(price);
+        updateTotal();
+    }
+
+    function updateTotal() {
+        let total = 0;
+        $('.item-row').each(function() {
+            let quantity = parseInt($(this).find('.quantity').val()) || 0;
+            let price = parseFloat($(this).find('.item-price').val()) || 0;
+            total += quantity * price;
+        });
+        $('#totalPrice').text('₹' + total.toFixed(2));
+    }
+
+    $('#orderForm').submit(function(e) {
+        e.preventDefault();
+
+        let items = [];
+        $('.item-row').each(function() {
+            let productId = $(this).find('.product-select').val();
+            let quantity = $(this).find('.quantity').val();
+            let price = $(this).find('.item-price').val();
+
+            if (productId && quantity && price) {
+                items.push({
+                    product_id: productId,
+                    quantity: quantity,
+                    price_at_time: price
+                });
+            }
+        });
+
+        if (items.length === 0) {
+            alert('Please add at least one item');
+            return;
+        }
+
+        let totalPrice = $('#totalPrice').text().replace('₹', '');
+
+        $.ajax({
+            url: '/api/orders/',
+            type: 'POST',
+            data: JSON.stringify({
+                customer_name: $('#customerName').val(),
+                customer_phone: $('#customerPhone').val(),
+                customer_email: $('#customerEmail').val(),
+                notes: $('#notes').val(),
+                status: 'pending',
+                total_price: totalPrice
+            }),
+            contentType: 'application/json',
+            success: function(data) {
+                alert('Order created successfully!');
+                window.location.href = '/';
+            },
+            error: function() {
+                alert('Error creating order');
+            }
+        });
+    });
+</script>
+{% endblock %}
