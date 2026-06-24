@@ -7,13 +7,18 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import Product, Order
+from .models import Product, Order, UserProfile
 from .serializers import ProductSerializer, OrderSerializer
 from .forms import UserLoginForm, UserRegisterForm
 
-def home(request):
-    """Landing page - shown to everyone (logged in or not)"""
-    return render(request, 'orders/home.html')
+
+# Helper function to check user role
+def get_user_role(user):
+    try:
+        return user.profile.role
+    except:
+        return 'staff'
+
 
 # Authentication Views
 
@@ -23,12 +28,14 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-            return redirect('home')  # <-- Change 'index' to 'home' (or 'dashboard')
+            return redirect('dashboard')
+        else:
+            # Print errors for debugging
+            print("Form errors:", form.errors)
     else:
         form = UserRegisterForm()
 
     return render(request, 'orders/register.html', {'form': form})
-
 
 def user_login(request):
     if request.method == 'POST':
@@ -46,7 +53,7 @@ def user_login(request):
 
             if user is not None:
                 login(request, user)
-                return redirect('home')  # <-- Change 'index' to 'home' (or 'dashboard')
+                return redirect('dashboard')
             else:
                 form.add_error(None, 'Invalid username or password')
     else:
@@ -57,7 +64,14 @@ def user_login(request):
 
 def user_logout(request):
     logout(request)
-    return redirect('login')
+    return redirect('home')
+
+
+# Landing Page
+
+def home(request):
+    """Landing page - shown to everyone"""
+    return render(request, 'orders/home.html')
 
 
 # Template Views
@@ -65,19 +79,27 @@ def user_logout(request):
 @login_required(login_url='login')
 @require_http_methods(["GET"])
 def dashboard(request):
-    return render(request, 'orders/dashboard.html')
+    user_role = get_user_role(request.user)
+    return render(request, 'orders/dashboard.html', {'user_role': user_role})
 
 
 @login_required(login_url='login')
 @require_http_methods(["GET"])
 def add_order(request):
-    return render(request, 'orders/add_order.html')
+    user_role = get_user_role(request.user)
+
+    # Only staff can add orders
+    if user_role != 'staff':
+        return render(request, 'orders/access_denied.html')
+
+    return render(request, 'orders/add_order.html', {'user_role': user_role})
 
 
 @login_required(login_url='login')
 @require_http_methods(["GET"])
 def order_detail(request, pk):
-    return render(request, 'orders/order_detail.html', {'order_id': pk})
+    user_role = get_user_role(request.user)
+    return render(request, 'orders/order_detail.html', {'order_id': pk, 'user_role': user_role})
 
 
 # API ViewSets
@@ -93,6 +115,19 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def update_status(self, request, pk=None):
+        # Check user role
+        try:
+            user_role = request.user.profile.role
+        except:
+            user_role = 'staff'
+
+        # Only staff can update status
+        if user_role != 'staff':
+            return Response(
+                {'error': 'Only staff members can update order status'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         order = self.get_object()
         new_status = request.data.get('status')
 

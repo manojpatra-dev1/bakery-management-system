@@ -20,7 +20,7 @@
             border-radius: 10px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
             width: 100%;
-            max-width: 400px;
+            max-width: 450px;
         }
         .register-title {
             text-align: center;
@@ -45,9 +45,11 @@
             padding: 10px;
             font-size: 16px;
             margin-top: 10px;
+            color: white;
         }
         .btn-register:hover {
             background-color: #6b3410;
+            color: white;
         }
         .login-link {
             text-align: center;
@@ -61,6 +63,12 @@
         .error-message {
             color: #dc3545;
             font-size: 12px;
+            margin-top: 5px;
+        }
+        .form-label {
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 8px;
         }
     </style>
 </head>
@@ -68,7 +76,7 @@
     <div class="register-container">
         <div class="register-title">🍰 Bakery Manager</div>
 
-        <h3 style="text-align: center; margin-bottom: 25px; color: #333;">Register</h3>
+        <h3 style="text-align: center; margin-bottom: 25px; color: #333;">Create Account</h3>
 
         <form method="POST">
             {% csrf_token %}
@@ -79,6 +87,18 @@
                 {% if form.username.errors %}
                     <div class="error-message">
                         {% for error in form.username.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Role</label>
+                {{ form.role }}
+                {% if form.role.errors %}
+                    <div class="error-message">
+                        {% for error in form.role.errors %}
                             {{ error }}
                         {% endfor %}
                     </div>
@@ -109,7 +129,15 @@
                 {% endif %}
             </div>
 
-            <button type="submit" class="btn btn-primary btn-register">Register</button>
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <button type="submit" class="btn btn-register">Register</button>
         </form>
 
         <div class="login-link">

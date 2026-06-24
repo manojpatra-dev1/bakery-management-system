@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Product, Order, OrderItem
+from .models import Product, Order, OrderItem, UserProfile
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
@@ -17,3 +17,9 @@ class OrderAdmin(admin.ModelAdmin):
 class OrderItemAdmin(admin.ModelAdmin):
     list_display = ['id', 'order', 'product', 'quantity', 'price_at_time']
     search_fields = ['order__customer_name']
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ['user', 'role', 'created_at']
+    search_fields = ['user__username']
+    list_filter = ['role']

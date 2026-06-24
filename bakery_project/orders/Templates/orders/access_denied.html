@@ -1,0 +1,15 @@
+{% extends 'orders/base.html' %}
+
+{% block title %}Access Denied{% endblock %}
+
+{% block content %}
+<div class="alert alert-danger mt-5" style="max-width: 600px; margin: 50px auto;">
+    <h2> Access Denied</h2>
+    <p>You don't have permission to access this page.</p>
+    <p>Only <strong>Staff Members</strong> can create orders.</p>
+
+    <div class="mt-3">
+        <a href="/dashboard/" class="btn btn-primary">Go to Dashboard</a>
+    </div>
+</div>
+{% endblock %}
