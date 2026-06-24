@@ -11,6 +11,9 @@ from .models import Product, Order
 from .serializers import ProductSerializer, OrderSerializer
 from .forms import UserLoginForm, UserRegisterForm
 
+def home(request):
+    """Landing page - shown to everyone (logged in or not)"""
+    return render(request, 'orders/home.html')
 
 # Authentication Views
 
@@ -20,7 +23,7 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-            return redirect('index')
+            return redirect('home')  # <-- Change 'index' to 'home' (or 'dashboard')
     else:
         form = UserRegisterForm()
 
@@ -43,7 +46,7 @@ def user_login(request):
 
             if user is not None:
                 login(request, user)
-                return redirect('index')
+                return redirect('home')  # <-- Change 'index' to 'home' (or 'dashboard')
             else:
                 form.add_error(None, 'Invalid username or password')
     else:
@@ -61,8 +64,8 @@ def user_logout(request):
 
 @login_required(login_url='login')
 @require_http_methods(["GET"])
-def index(request):
-    return render(request, 'orders/index.html')
+def dashboard(request):
+    return render(request, 'orders/dashboard.html')
 
 
 @login_required(login_url='login')
