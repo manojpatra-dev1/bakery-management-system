@@ -12,6 +12,7 @@
 <div class="card">
     <div class="card-body">
         <form id="orderForm">
+            {% csrf_token %}
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Customer Name *</label>
@@ -186,27 +187,32 @@
         }
 
         let totalPrice = $('#totalPrice').text().replace('₹', '');
+// Get CSRF token
+let csrftoken = $('[name=csrfmiddlewaretoken]').val();
 
-        $.ajax({
-            url: '/api/orders/',
-            type: 'POST',
-            data: JSON.stringify({
-                customer_name: $('#customerName').val(),
-                customer_phone: $('#customerPhone').val(),
-                customer_email: $('#customerEmail').val(),
-                notes: $('#notes').val(),
-                status: 'pending',
-                total_price: totalPrice
-            }),
-            contentType: 'application/json',
-            success: function(data) {
-                alert('Order created successfully!');
-                window.location.href = '/';
-            },
-            error: function() {
-                alert('Error creating order');
-            }
-        });
+$.ajax({
+    url: '/api/orders/',
+    type: 'POST',
+    headers: {
+        'X-CSRFToken': csrftoken,
+    },
+    data: JSON.stringify({
+        customer_name: $('#customerName').val(),
+        customer_phone: $('#customerPhone').val(),
+        customer_email: $('#customerEmail').val(),
+        notes: $('#notes').val(),
+        status: 'pending',
+        total_price: totalPrice
+    }),
+    contentType: 'application/json',
+    success: function(data) {
+        alert('Order created successfully!');
+        window.location.href = '/';
+    },
+    error: function() {
+        alert('Error creating order');
+    }
+});
     });
 </script>
 {% endblock %}

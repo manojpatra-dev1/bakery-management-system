@@ -1,4 +1,5 @@
 {% extends 'orders/base.html' %}
+{% csrf_token %}
 
 {% block title %}Dashboard - Bakery Manager{% endblock %}
 
@@ -130,22 +131,47 @@
     }
 
     function updateStatus(orderId) {
-        let newStatus = prompt('Enter new status (pending, ready, completed, cancelled):');
-        if (newStatus) {
-            $.ajax({
-                url: `/api/orders/${orderId}/update_status/`,
-                type: 'POST',
-                data: JSON.stringify({status: newStatus}),
-                contentType: 'application/json',
-                success: function() {
-                    alert('Status updated!');
-                    loadOrders();
-                },
-                error: function() {
-                    alert('Error updating status');
-                }
-            });
+    let newStatus = prompt('Enter new status (pending, ready, completed, cancelled):');
+    if (!newStatus) return;
+
+    // Get CSRF token from cookie
+    let csrftoken = getCsrfToken();
+
+    $.ajax({
+        url: `/api/orders/${orderId}/update_status/`,
+        type: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+        },
+        data: JSON.stringify({status: newStatus}),
+        contentType: 'application/json',
+        success: function(data) {
+            console.log('Success:', data);
+            alert('Status updated!');
+            loadOrders();
+        },
+        error: function(xhr, status, error) {
+            console.error('Error:', error);
+            alert('Error updating status');
+        }
+    });
+}
+
+// Function to get CSRF token from cookie
+function getCsrfToken() {
+    let name = 'csrftoken';
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        let cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            let cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
         }
     }
+    return cookieValue;
+}
 </script>
 {% endblock %}
